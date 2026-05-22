@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study & Task Time Tracker</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242736;
+      --border: #2e3247;
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+    h1 span { color: var(--accent2); }
+    .subtitle { color: var(--text2); font-size: 0.9rem; margin-top: 4px; }
+
+    .header { margin-bottom: 28px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 24px; }
+    .tab {
+      padding: 8px 18px; border-radius: 8px; border: 1.5px solid var(--border);
+      background: transparent; color: var(--text2); cursor: pointer;
+      font-size: 0.9rem; font-weight: 500; transition: all 0.15s;
+    }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tab:hover:not(.active) { border-color: var(--accent2); color: var(--accent2); }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 14px; font-weight: 600; }
+
+    .timer-display {
+      font-size: 3.5rem; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--accent2); text-align: center; padding: 16px 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer-display.running { color: var(--green); }
+
+    .input-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    input[type="text"], select {
+      flex: 1; min-width: 160px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 10px 14px;
+      font-size: 0.92rem; outline: none; transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent2); }
+    select option { background: var(--surface2); }
+
+    .btn {
+      padding: 10px 22px; border-radius: 8px; border: none;
+      font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c73ff; }
+    .btn-green { background: var(--green); color: #0f1117; }
+    .btn-green:hover { opacity: 0.85; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-red:hover { opacity: 0.85; }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text2); }
+    .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    .session-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .session-item:last-child { border-bottom: none; }
+    .session-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .session-info { flex: 1; }
+    .session-name { font-size: 0.92rem; font-weight: 500; }
+    .session-cat { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+    .session-time { font-size: 0.88rem; color: var(--text2); font-variant-numeric: tabular-nums; }
+    .session-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1rem; padding: 4px; border-radius: 4px; }
+    .session-del:hover { color: var(--red); }
+    .empty { color: var(--text3); text-align: center; padding: 24px 0; font-size: 0.9rem; }
+
+    .summary-row { margin-bottom: 14px; }
+    .summary-label { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 6px; }
+    .summary-label span:first-child { color: var(--text2); }
+    .summary-label span:last-child { color: var(--text); font-weight: 600; }
+    .bar-track { background: var(--surface2); border-radius: 999px; height: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+
+    .history-day {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px;
+    }
+    .history-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .history-day-date { font-weight: 600; font-size: 0.95rem; }
+    .history-day-total { color: var(--accent2); font-weight: 700; font-size: 0.95rem; }
+    .history-entry { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text2); padding: 4px 0; }
+    .history-entry .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    .streak-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .streak-day-box {
+      width: 28px; height: 28px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: var(--text3); font-weight: 600;
+      background: var(--surface2); cursor: default;
+    }
+    .streak-day-box.has-data { background: var(--accent); color: #fff; }
+    .streak-day-box.today { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-box { background: var(--surface2); border-radius: 10px; padding: 14px; text-align: center; }
+    .stat-val { font-size: 1.6rem; font-weight: 700; color: var(--accent2); }
+    .stat-label { font-size: 0.75rem; color: var(--text3); margin-top: 4px; }
+
+    .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .cat-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 500; background: var(--surface2); border: 1.5px solid var(--border); }
+    .cat-chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .cat-chip-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0; margin-left: 2px; }
+    .cat-chip-del:hover { color: var(--red); }
+    .add-cat-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input[type="color"] { width: 36px; height: 36px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; padding: 2px; }
+
+    .section-gap { margin-top: 24px; }
+    .danger-zone { border-color: #7f1d1d; }
+    .danger-zone .card-title { color: var(--red); }
+
+    @media (max-width: 500px) {
+      .timer-display { font-size: 2.6rem; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⏱ <span>Focus</span>Tracker</h1>
+  <p class="subtitle">Track your study sessions and daily habits</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('timer')">Timer</button>
+  <button class="tab" onclick="showPage('today')">Today</button>
+  <button class="tab" onclick="showPage('history')">History</button>
+  <button class="tab" onclick="showPage('settings')">Settings</button>
+</div>
+
+<div id="page-timer" class="page active">
+  <div class="card">
+    <div class="card-title">Active Timer</div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="input-row" style="margin-top:16px;">
+      <input type="text" id="taskName" placeholder="Task name (e.g. Chapter 3 reading)" />
+      <select id="taskCategory"></select>
+    </div>
+    <div class="timer-controls">
+      <button class="btn btn-green" id="startBtn" onclick="startTimer()">▶ Start</button>
+      <button class="btn btn-red" id="stopBtn" onclick="stopTimer()" style="display:none;">■ Stop & Save</button>
+      <button class="btn btn-ghost" id="cancelBtn" onclick="cancelTimer()" style="display:none;">✕ Cancel</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Today's Sessions</div>
+    <div id="todaySessionList"><p class="empty">No sessions yet today. Start the timer above!</p></div>
+  </div>
+</div>
+
+<div id="page-today" class="page">
+  <div class="card">
+    <div class="card-title">Today's Summary</div>
+    <div id="todayStats" class="stat-grid"></div>
+    <div id="todaySummaryBars"></div>
+  </div>
+</div>
+
+<div id="page-history" class="page">
+  <div class="card">
+    <div class="card-title">Study Streak (last 30 days)</div>
+    <div class="streak-grid" id="streakGrid"></div>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<div id="page-settings" class="page">
+  <div class="card">
+    <div class="card-title">Categories</div>
+    <div class="cat-list" id="catList"></div>
+    <div class="add-cat-row">
+      <input type="text" id="newCatName" placeholder="Category name" style="flex:1;min-width:120px;" />
+      <input type="color" id="newCatColor" value="#6c63ff" />
+      <button class="btn btn-primary" onclick="addCategory()">+ Add</button>
+    </div>
+  </div>
+  <div class="card section-gap danger-zone">
+    <div class="card-title">Danger Zone</div>
+    <p style="color:var(--text2);font-size:0.88rem;margin-bottom:14px;">Clear all data permanently. This cannot be undone.</p>
+    <button class="btn btn-red" onclick="clearAllData()">🗑 Clear All Data</button>
+  </div>
+</div>
+
+<script>
+let state = loadState();
+
+function defaultState() {
+  return {
+    categories: [
+      { id: 'c957',  name: 'Applied Algebra – C957',                     color: '#6c63ff' },
+      { id: 'd325',  name: 'Networks – D325',                            color: '#34d399' },
+      { id: 'd281',  name: 'Linux Foundations – D281',                   color: '#fbbf24' },
+      { id: 'c777',  name: 'Web Development Applications – C777',        color: '#f87171' },
+      { id: 'd282',  name: 'Cloud Foundations – D282',                   color: '#60a5fa' },
+      { id: 'd426',  name: 'Data Management - Foundations – D426',       color: '#f472b6' },
+      { id: 'd427',  name: 'Data Management - Applications – D427',      color: '#fb923c' },
+      { id: 'd329',  name: 'Network and Security - Applications – D329', color: '#a78bfa' },
+      { id: 'c769',  name: 'IT Capstone Written Project – C769',         color: '#94a3b8' },
+    ],
+    sessions: [],
+  };
+}
+
+function loadState() {
+  try { const r = localStorage.getItem('focustracker_v2'); if (r) return JSON.parse(r); } catch(e) {}
+  return defaultState();
+}
+function saveState() { localStorage.setItem('focustracker_v2', JSON.stringify(state)); }
+
+let timerInterval = null, timerStart = null, running = false;
+
+function fmt(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return [h,m,sec].map(v=>String(v).padStart(2,'0')).join(':'); }
+
+function startTimer() {
+  const name = document.getElementById('taskName').value.trim();
+  if (!name) { document.getElementById('taskName').focus(); return; }
+  running = true; timerStart = Date.now();
+  timerInterval = setInterval(() => { document.getElementById('timerDisplay').textContent = fmt(Math.floor((Date.now()-timerStart)/1000)); }, 1000);
+  document.getElementById('timerDisplay').classList.add('running');
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = '';
+  document.getElementById('cancelBtn').style.display = '';
+}
+
+function stopTimer() {
+  if (!running) return;
+  clearInterval(timerInterval); running = false;
+  const end = Date.now(), duration = Math.floor((end - timerStart) / 1000);
+  if (duration < 5) { cancelTimer(); return; }
+  state.sessions.push({ id: Date.now(), date: todayStr(), task: document.getElementById('taskName').value.trim(), category: document.getElementById('taskCategory').value, start: timerStart, end, duration });
+  saveState(); resetTimer(); renderAll();
+}
+
+function cancelTimer() { clearInterval(timerInterval); running = false; resetTimer(); }
+
+function resetTimer() {
+  document.getElementById('timerDisplay').textContent = '00:00:00';
+  document.getElementById('timerDisplay').classList.remove('running');
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+function fmtDuration(s) {
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function getCat(id) { return state.categories.find(c=>c.id===id) || {name:id,color:'#94a3b8'}; }
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr+'T12:00:00'), today = new Date(); today.setHours(12,0,0,0);
+  const diff = Math.round((today-d)/86400000);
+  if (diff===0) return 'Today'; if (diff===1) return 'Yesterday';
+  return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
+
+function renderAll() { renderCategorySelect(); renderTodaySessionList(); renderTodaySummary(); renderHistory(); renderCatSettings(); renderStreak(); }
+
+function renderCategorySelect() {
+  const sel = document.getElementById('taskCategory'), cur = sel.value;
+  sel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (cur && state.categories.find(c=>c.id===cur)) sel.value = cur;
+}
+
+function renderTodaySessionList() {
+  const sessions = state.sessions.filter(s=>s.date===todayStr()).slice().reverse();
+  const el = document.getElementById('todaySessionList');
+  if (!sessions.length) { el.innerHTML='<p class="empty">No sessions yet today. Start the timer above!</p>'; return; }
+  el.innerHTML = sessions.map(s => {
+    const cat = getCat(s.category), time = new Date(s.start).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return `<div class="session-item">
+      <div class="session-dot" style="background:${cat.color}"></div>
+      <div class="session-info"><div class="session-name">${esc(s.task)}</div><div class="session-cat">${cat.name} · ${time}</div></div>
+      <div class="session-time">${fmtDuration(s.duration)}</div>
+      <button class="session-del" onclick="deleteSession(${s.id})" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function renderTodaySummary() {
+  const sessions = state.sessions.filter(s=>s.date===todayStr());
+  const totalSecs = sessions.reduce((a,s)=>a+s.duration,0);
+  document.getElementById('todayStats').innerHTML = `
+    <div class="stat-box"><div class="stat-val">${fmtDuration(totalSecs)}</div><div class="stat-label">Total today</div></div>
+    <div class="stat-box"><div class="stat-val">${sessions.length}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-box"><div class="stat-val">${sessions.length?fmtDuration(Math.round(totalSecs/sessions.length)):'—'}</div><div class="stat-label">Avg session</div></div>`;
+  const barsEl = document.getElementById('todaySummaryBars');
+  if (!totalSecs) { barsEl.innerHTML='<p class="empty">Complete a session to see your breakdown.</p>'; return; }
+  const bycat = {};
+  sessions.forEach(s => { bycat[s.category]=(bycat[s.category]||0)+s.duration; });
+  barsEl.innerHTML = Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([catId,secs])=>{
+    const cat=getCat(catId), pct=Math.round((secs/totalSecs)*100);
+    return `<div class="summary-row"><div class="summary-label"><span>${cat.name}</span><span>${fmtDuration(secs)} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cat.color}"></div></div></div>`;
+  }).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  const byDate = {};
+  state.sessions.forEach(s=>{ if(!byDate[s.date]) byDate[s.date]=[]; byDate[s.date].push(s); });
+  const dates = Object.keys(byDate).sort().reverse();
+  if (!dates.length) { el.innerHTML='<div class="card"><p class="empty">No history yet. Start tracking!</p></div>'; return; }
+  el.innerHTML = dates.map(date=>{
+    const sessions=byDate[date], total=sessions.reduce((a,s)=>a+s.duration,0);
+    return `<div class="history-day">
+      <div class="history-day-header"><span class="history-day-date">${formatDateLabel(date)}</span><span class="history-day-total">${fmtDuration(total)}</span></div>
+      ${sessions.map(s=>`<div class="history-entry"><div class="dot" style="background:${getCat(s.category).color}"></div><span>${esc(s.task)}</span><span style="margin-left:auto;color:var(--text3)">${fmtDuration(s.duration)}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderStreak() {
+  const today=todayStr(), datesWithData=new Set(state.sessions.map(s=>s.date)), days=[];
+  for (let i=29;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); days.push(d.toISOString().slice(0,10)); }
+  document.getElementById('streakGrid').innerHTML = days.map(d=>`<div class="streak-day-box ${datesWithData.has(d)?'has-data':''} ${d===today?'today':''}" title="${d}">${parseInt(d.slice(8))}</div>`).join('');
+}
+
+function renderCatSettings() {
+  document.getElementById('catList').innerHTML = state.categories.map(c=>`
+    <div class="cat-chip"><div class="cat-chip-dot" style="background:${c.color}"></div>${esc(c.name)}<button class="cat-chip-del" onclick="deleteCategory('${c.id}')">✕</button></div>`).join('');
+}
+
+function deleteSession(id) { state.sessions=state.sessions.filter(s=>s.id!==id); saveState(); renderAll(); }
+
+function addCategory() {
+  const name=document.getElementById('newCatName').value.trim(), color=document.getElementById('newCatColor').value;
+  if (!name) return;
+  state.categories.push({id:'cat_'+Date.now(),name,color});
+  document.getElementById('newCatName').value='';
+  saveState(); renderAll();
+}
+
+function deleteCategory(id) {
+  if (state.categories.length<=1) return;
+  state.categories=state.categories.filter(c=>c.id!==id);
+  saveState(); renderAll();
+}
+
+function clearAllData() {
+  if (!confirm('Are you sure? This will permanently delete all sessions and categories.')) return;
+  state=defaultState(); saveState(); renderAll();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name==='today') renderTodaySummary();
+  if (name==='history') { renderHistory(); renderStreak(); }
+}
+
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+renderAll();
+</script>
+</body>
+</html>
